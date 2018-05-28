@@ -256,7 +256,11 @@
             window.stationsInformation = [];
             window.stationsVotes = [];
             window.alreadySearched = '';
-            window.clusterMarkers = new L.markerClusterGroup();
+            window.clusterMarkers = new L.MarkerClusterGroup({ chunkedLoading: true });
+
+            window.withoutFuel = '#ff0000';
+            window.withFuel = '#00ff00';
+            window.dontKnow = '#ccc';
 
             window.keyGas = 'gas';
             window.keyEtanol = 'etanol';
@@ -320,9 +324,9 @@
                 /**
                  * Login and Logout actions
                  */
-                jQuery("#facebook").click(self.loginWithFacebook);
-                jQuery("#google").click(self.loginWithGoogle);
-                jQuery("#logout").click(self.logoutUser);
+                jQuery(document).on('click', '#facebook', self.loginWithFacebook);
+                jQuery(document).on('click', '#google', self.loginWithGoogle);
+                jQuery(document).on('click', '#logout', self.logoutUser);
 
                 firebase.auth().onAuthStateChanged(function(user) {
                     if (user) {
@@ -416,19 +420,25 @@
                 });
 
                 geoQuery.on("key_entered", function(stationId, location) {
+                    if (window.visibleStations.hasOwnProperty(stationId)) {
+                        return true;
+                    }
+
                     window.visibleStations[stationId] = true;
+
+                    window.gas_Stations_Votes.child(stationId).once("value", function(dataSnapshot) {
+                        stationData = dataSnapshot.val();
+                        if (stationData !== null) {
+                            window.stationsVotes[stationId] = stationData;
+                        }
+                    });
+
                     window.gas_Stations.child(stationId).once("value", function(dataSnapshot) {
                         station = dataSnapshot.val();
                         if (station !== null && window.visibleStations[stationId] === true) {
                             window.stationsInformation[stationId] = station;
                             var stationMarker = self.addStation(stationId, unescape(station.name), location.reverse());
                             window.clusterMarkers.addLayer(stationMarker);
-                        }
-                    });
-                    window.gas_Stations_Votes.child(stationId).once("value", function(dataSnapshot) {
-                        stationData = dataSnapshot.val();
-                        if (stationData !== null) {
-                            window.stationsVotes[stationId] = stationData;
                         }
                     });
                 });
@@ -524,7 +534,21 @@
                     stationName = name;
                 }
 
-                var marker = L.marker(location, {'name': stationName, 'stationId': stationId}).bindPopup('<h1>' + stationName + '</h1>');
+                var customIcon = self.getIcon(window.dontKnow);
+                if (window.stationsVotes.hasOwnProperty(stationId)) {
+                    var haveGasTotal = self.countVotes(true, window.keyGas, stationId);
+                    var doesntHaveGasTotal = self.countVotes(false, window.keyGas, stationId);
+
+                    if (haveGasTotal > doesntHaveGasTotal) {
+                        customIcon = self.getIcon(window.withFuel);
+                    }
+
+                    if (haveGasTotal < doesntHaveGasTotal) {
+                        customIcon = self.getIcon(window.withoutFuel);
+                    }
+                }
+
+                var marker = L.marker(location, {'name': stationName, 'stationId': stationId, 'icon': customIcon}).bindPopup('<h1>' + stationName + '</h1>');
                 window.visibleStations[stationId] = marker;
                 return marker;
             }
@@ -648,6 +672,20 @@
                 });
 
                 return votesQty;
+            }
+
+            function getIcon(color) {
+                var markerHtmlStyles = "background-color: " + color + "; width: 3rem; height: 3rem; display: block; left: -1.5rem; top: -1.5rem; position: relative; border-radius: 3rem 3rem 0; transform: rotate(45deg); border: 1px solid #FFFFFF";
+
+                var icon = new L.divIcon({
+                    className: "my-custom-pin",
+                    iconAnchor: [0, 24],
+                    labelAnchor: [-6, 0],
+                    popupAnchor: [0, -36],
+                    html: '<span style="' + markerHtmlStyles + '" />'
+                });
+
+                return icon;
             }
         </script>
         <!-- Global site tag (gtag.js) - Google Analytics -->
