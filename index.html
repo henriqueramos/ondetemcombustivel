@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Onde tem combust&iacute;vel?</title>
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css" integrity="sha384-Zug+QiDoJOrZ5t4lssLdxGhVrurbmBWopoEl+M6BdEfwnCJZtKxi1KgxUyJq13dy" crossorigin="anonymous">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.1/dist/leaflet.css"
+        integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
+        crossorigin=""/>
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.3.0/dist/MarkerCluster.css" integrity="sha384-lPzjPsFQL6te2x+VxmV6q1DpRxpRk0tmnl2cpwAO5y04ESyc752tnEWPKDfl1olr" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.3.0/dist/MarkerCluster.Default.css" integrity="sha384-5kMSQJ6S4Qj5i09mtMNrWpSi8iXw230pKU76xTmrpezGnNJQzj0NzXjQLLg+jE7k" crossorigin="anonymous">
+
+        <link rel="stylesheet" href="css/main.css" />
+
+        <meta name="description" content="Web aplicativo para listar de forma colaborativa onde há postos com combustíveis no Brasil." />
+        <meta name="keywords" content="combustível, gasolina, etanol, brasil, crise dos caminhoneiros" />
+        <meta name="author" content="metatags generator">
+        <meta name="robots" content="index, follow">
+        <meta name="revisit-after" content="1 days">
+
+        <meta property="og:title" content="Onde tem combustível?"/>
+        <meta property="og:image" content="ondetemcombustivel.png"/>
+        <meta property="og:description" content="Web aplicativo para listar de forma colaborativa onde há postos com combustíveis no Brasil."/>
+        <meta property="og:url" content="//ondetemcombustivel.com" />
+    </head>
+    <body>
+        <div id="navigation" class="overlay">
+            <!-- Button to close the overlay navigation -->
+            <button class="closeNavigation btn btn-outline-light">x</button>
+            <!-- Overlay content -->
+            <div class="overlay-content">
+                <div class="container">
+                    <div class="row">
+                        <div class="col">
+                            <h1>Sobre</h1>
+                            <p>Essa ferramenta foi feita entre os dias 26 e 27 de maio de 2018; para listar onde haviam postos com combust&iacute;veis no Brasil com base na informa&ccedil;&atilde;o cedida pelos usu&aacute;rios. Ajudando a passar pela <a href="https://economia.uol.com.br/noticias/bbc/2018/05/24/cronologia-greve-diesel-dilma-temer.htm">crise dos caminhoeiros</a> com o m&iacute;nimo de impacto poss&iacute;vel.</p>
+                            <h1>Quem &eacute; o maluco que desenvolveu isso?</h1>
+                            <p>Prazer, Henrique Ramos <a href="https://www.linkedin.com/in/henriqueramos/" target="_blank">(LinkedIn)</a>. Programador, eterno Licenciando em Geografia. Vivendo no Rio de Janeiro enquanto a Tina Turner n&atilde;o chega com o Thunderdome.</p>
+                            <h1>Posso indicar onde h&aacute; combust&iacute;vel?</h1>
+                            <div class="loggedInUser">
+                                <p>Ol&aacute; <span class="username"></span>.</p>
+                                <p><img id="loggedUserAvatar" src="https://api.adorable.io/avatars/130/1.png" width="130px" height="130px"/></p>
+                                <button id="logout" class="btn btn-light">Sair</button>
+                            </div>
+                            <div class="notLoggedIn">
+                                <p>Sim. Por&eacute;m voc&ecirc; precisa fazer login atrav&eacute;s do Facebook ou Google para isso.</p>
+                                <div class="btn-group" role="group">
+                                    <button id="facebook" class="btn btn-light">Entrar com facebook</button>
+                                    <button id="google" class="btn btn-light">Entrar com Google</button>
+                                </div>
+                            </div>
+                            <h1>Quais tecnologias foram usadas?</h1>
+                            <p>Leaflet.js, Firebase, jQuery, Bootstrap 4.0, OpenStreetMap, Google Maps API.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="">
+            <div class="row no-gutters">
+                <div class="col map-wrapper">
+                    <div id="map"></div>
+                </div>
+            </div>
+            <div class="container searchbox">
+                <div class="row">
+                    <div class="col">
+                        <div class="searchForm">
+                            <form>
+                                <div class="form-group">
+                                    <div class="input-group input-group-lg">
+                                        <input type="text" class="form-control form-control-lg" id="searchLocation" placeholder="Sua cidade">
+                                        <div class="input-group-append">
+                                            <div class="input-group-text">
+                                                <button class="btn btn-link btn-lg btn-none" id="searchCity" type="button">&#x1f50e;</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="openMenu btn btn-dark">&#9776;</div>
+        <div class="loading">
+            <div class="lds-circle"></div>
+        </div>
+
+        <div class="modal fade loginAt" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-md">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="mySmallModalLabel">Aviso</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">X</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Para usar essa fun&ccedil;&atilde;o voc&ecirc; precisa entrar na plataforma.</p>
+                        <div class="btn-group" role="group">
+                            <button id="facebook" class="btn btn-light">Entrar com facebook</button>
+                            <button id="google" class="btn btn-light">Entrar com Google</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha384-tsQFqpEReu7ZLhBV2VZlAu7zcOV+rXbYlF2cqB8txI/8aZajjp4Bqd+V6D5IgvKT" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/js/bootstrap.min.js" integrity="sha384-a5N7Y/aK3qNeh15eJKGWxsqtnX/wWdSZSKp+81YjTmS15nvnvxKHuzaWwXHDli+4" crossorigin="anonymous"></script>
+
+        <script src="https://unpkg.com/leaflet@1.3.1/dist/leaflet.js" integrity="sha512-/Nsx9X4HebavoBvEBuyp3I7od5tA0UzAxs+j83KgC8PU0kgB4XiK4Lfe4y4cgBtaRJQEIFCW+oC506aPT2L1zw==" crossorigin=""></script>
+        <script src="https://unpkg.com/leaflet.markercluster@1.3.0/dist/leaflet.markercluster.js" integrity="sha384-1artbd0pdGdZ72+IcKWkY1So1xu4Hzygfd0cVLSs7f5lBZZ/FhyEZc4UyQR3DT9c" crossorigin="anonymous"></script>
+
+        <script src="http://maps.googleapis.com/maps/api/js?libraries=places&amp;key=AIzaSyAcLRmkznm1Ie0BVjkIKyQ2Vqyo3DOYavs"></script>
+
+        <script src="https://cdn.rawgit.com/ubilabs/geocomplete/7ce2f83a/jquery.geocomplete.min.js" integrity="sha384-BfB/qL6fSHiqRz6Tvj5Wv8Z288D1KeO61Pd0A1UuIkvYlBhz11SMQl3mlJQN2hE1" crossorigin="anonymous"></script>
+
+        <script src="https://www.gstatic.com/firebasejs/5.0.4/firebase.js"></script>
+        <script src="https://cdn.firebase.com/libs/geofire/4.1.2/geofire.min.js"></script>
+
+        <script src="https://unpkg.com/jsrender@0.9.90/jsrender.js" integrity="sha384-/9PPJOI3QiSGN4500tRiJBNxudCXdFoqmRWe/H6zBxGSXvhie3uGrXSxzyDWDyh/" crossorigin="anonymous"></script>
+
+        <script id="stationTmpl" type="text/x-jsrender">
+            <h1>{{>name}}</h1>
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col">
+                        <h4>Gasolina</h4>
+                    </div>
+                    <div class="col">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="station{{:stationId}} fuelgas voteYes btn btn-success {{if votedGas == true}}active{{/if}}" data-stationId="{{:stationId}}" data-fuel="gas">&#x1f44d;</button>
+                            <button type="button" class="station{{:stationId}} fuelgas voteNo btn btn-danger {{if votedGas == false}}active{{/if}}" data-stationId="{{:stationId}}" data-fuel="gas">&#x1f44e;</button>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-12 col-lg-12">
+                        {{if haveGasTotal >= doesntHaveGasTotal && haveGasTotal != 0}}
+                        <p>
+                            <div class="alert alert-success" role="alert">
+                                <strong>{{>haveGasTotal}}</strong> (de {{>(haveGasTotal + doesntHaveGasTotal)}}) usu&aacute;rios votaram que h&aacute; Gasolina.
+                            </div>
+                        </p>
+                        {{else haveGasTotal < doesntHaveGasTotal && doesntHaveGasTotal != 0}}
+                        <p>
+                            <div class="alert alert-danger" role="alert">
+                                <strong>{{>doesntHaveGasTotal}}</strong> (de {{>(haveGasTotal + doesntHaveGasTotal)}}) usu&aacute;rios votaram que <strong>N&Atilde;O</strong> h&aacute; Gasolina.
+                            </div>
+                        </p>
+                        {{else}}
+                        <p>
+                            <div class="alert alert-dark" role="alert">
+                                Ningu&eacute;m votou ainda.
+                            </div>
+                        </p>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h4>Etanol</h4>
+                    </div>
+                    <div class="col">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="station{{:stationId}} fueletanol voteYes btn btn-success {{if votedEtanol == true}}active{{/if}}" data-stationId="{{:stationId}}" data-fuel="etanol">&#x1f44d;</button>
+                            <button type="button" class="station{{:stationId}} fueletanol voteNo btn btn-danger {{if votedEtanol == false}}active{{/if}}" data-stationId="{{:stationId}}" data-fuel="etanol">&#x1f44e;</button>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-12 col-lg-12">
+                        {{if haveEtanolTotal >= doesntHaveEtanolTotal && haveEtanolTotal != 0}}
+                        <p>
+                            <div class="alert alert-success" role="alert">
+                                <strong>{{>haveEtanolTotal}}</strong> (de {{>(haveEtanolTotal + doesntHaveEtanolTotal)}}) usu&aacute;rios votaram que h&aacute; Etanol.
+                            </div>
+                        </p>
+                        {{else haveEtanolTotal < doesntHaveEtanolTotal && doesntHaveEtanolTotal != 0}}
+                        <p>
+                            <div class="alert alert-danger" role="alert">
+                                <strong>{{>doesntHaveEtanolTotal}}</strong> (de {{>(haveEtanolTotal + doesntHaveEtanolTotal)}}) usu&aacute;rios votaram que <strong>N&Atilde;O</strong> h&aacute; Etanol.
+                            </div>
+                        </p>
+                        {{else}}
+                        <p>
+                            <div class="alert alert-dark" role="alert">
+                                Ningu&eacute;m votou ainda.
+                            </div>
+                        </p>
+                        {{/if}}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <h4>Diesel</h4>
+                    </div>
+                    <div class="col">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="station{{:stationId}} fueldiesel voteYes btn btn-success {{if votedDiesel == true}}active{{/if}}" data-stationId="{{:stationId}}" data-fuel="diesel" data-voted="{{:votedDiesel}}">&#x1f44d;</button>
+                            <button type="button" class="station{{:stationId}} fueldiesel voteNo btn btn-danger {{if votedDiesel == false}}active{{/if}}" data-stationId="{{:stationId}}" data-fuel="diesel" data-voted="{{:votedDiesel}}">&#x1f44e;</button>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-12 col-lg-12">
+                        {{if haveDieselTotal >= doesntHaveDieselTotal && haveDieselTotal != 0 }}
+                        <p>
+                            <div class="alert alert-success" role="alert">
+                                <strong>{{>haveDieselTotal}}</strong> (de {{>(haveDieselTotal + doesntHaveDieselTotal)}}) usu&aacute;rios votaram que h&aacute; Diesel.
+                            </div>
+                        </p>
+                        {{else haveDieselTotal < doesntHaveDieselTotal && doesntHaveDieselTotal != 0}}
+                        <p>
+                            <div class="alert alert-danger" role="alert">
+                                <strong>{{>doesntHaveDieselTotal}}</strong> (de {{>(haveDieselTotal + doesntHaveDieselTotal)}}) usu&aacute;rios votaram que <strong>N&Atilde;O</strong> h&aacute; Diesel.
+                            </div>
+                        </p>
+                        {{else}}
+                        <p>
+                            <div class="alert alert-dark" role="alert">
+                                Ningu&eacute;m votou ainda.
+                            </div>
+                        </p>
+                        {{/if}}
+                    </div>
+                </div>
+            </div>
+        </script>
+        <script type="application/javascript">
+            // Initialize Firebase
+            var config = {
+                apiKey: "AIzaSyCXOUcxB_YTxD5XPNi39ssaRcvR4f3MT2k",
+                authDomain: "ondetemcombustivel-br.firebaseapp.com",
+                databaseURL: "https://ondetemcombustivel-br.firebaseio.com",
+                projectId: "ondetemcombustivel-br",
+                storageBucket: "ondetemcombustivel-br.appspot.com",
+                messagingSenderId: "1000294041637"
+            };
+            firebase.initializeApp(config);
+
+            window.gas_Stations = firebase.database().ref('gas-stations');
+            window.gas_Stations_Location = new GeoFire(firebase.database().ref().child('gas-stations-location'));
+            window.gas_Stations_Votes = firebase.database().ref('gas-stations_votes');
+
+            // Failback
+            window.userLocation = [-22.9092579,-43.1949357];
+            window.currentUser = null;
+
+            window.map = null;
+
+            window.latestZoom = '';
+            window.visibleStations = [];
+            window.stationsInformation = [];
+            window.stationsVotes = [];
+            window.alreadySearched = '';
+            window.clusterMarkers = new L.markerClusterGroup();
+
+            window.keyGas = 'gas';
+            window.keyEtanol = 'etanol';
+            window.keyDiesel = 'diesel';
+
+            window.alreadyVoted = [];
+
+            jQuery(document).ready(function (){
+                self.getUserLocation();
+
+                window.map = L.map('map', { zoomControl: false }).setView(window.userLocation, 13);
+                var OpenStreetMap_Mapnik = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> | Auto-complete powered by Google'
+                });
+
+                new L.Control.Zoom({ position: 'topright' }).addTo(window.map);
+
+                OpenStreetMap_Mapnik.addTo(window.map);
+
+                window.map.on('moveend', function(e) {
+                    var centerOfMap = window.map.getCenter();
+                    window.userLocation = [centerOfMap.lat, centerOfMap.lng];
+
+                    var poly = new L.Polygon(window.alreadySearched);
+
+                    if (!(poly.getBounds().contains(window.userLocation))) {
+                        self.searchStations();
+                    }
+                });
+
+                window.map.on('zoomend', function(e){
+                    if (window.map.getZoom() < window.latestZoom) {
+                        self.searchStations();
+                    }
+                });
+
+                window.map.on('popupopen', self.displayStationInformation);
+
+                /**
+                 * Search Location
+                 */
+                var searchLocation = jQuery('#searchLocation');
+                searchLocation.geocomplete({
+                    types: ['geocode'],
+                }).bind("geocode:result", function(event, result){
+                    var lat = result.geometry.location.lat();
+                    var lng = result.geometry.location.lng();
+                    window.map.setView([lat, lng], 15);
+                }).bind("geocode:error", function(event, status){
+                    console.log("ERROR: " + status);
+                });
+                jQuery('#searchCity').click(self.searchCity);
+
+                /**
+                 * Votes
+                 */
+                jQuery(document).on('click', '.voteYes', self.stationVoteYes);
+                jQuery(document).on('click', '.voteNo', self.stationVoteNo);
+
+                /**
+                 * Login and Logout actions
+                 */
+                jQuery("#facebook").click(self.loginWithFacebook);
+                jQuery("#google").click(self.loginWithGoogle);
+                jQuery("#logout").click(self.logoutUser);
+
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        jQuery(".notLoggedIn").hide();
+                        jQuery(".loggedInUser .username").empty().text(user.displayName);
+                        
+                        if (user.photoURL) {
+                            jQuery(".loggedInUser #loggedUserAvatar").attr('src', user.photoURL);
+                        }
+                        jQuery(".loggedInUser").show();
+
+                        window.currentUser = user;
+                    }
+                });
+
+                /**
+                 * Menu
+                 */
+                jQuery(".openMenu").click(function () {
+                    jQuery("#navigation").width('100%');
+                });
+                jQuery(".closeNavigation").click(function () {
+                    jQuery("#navigation").width('0%');
+                });
+
+                self.searchStations();
+            });
+
+            function searchCity(event)
+            {
+                jQuery(this).parents(".form-group").find("#searchLocation").trigger("geocode");
+            }
+
+            function getUserLocation()
+            {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(showPosition);
+                    return true;
+                }
+            }
+
+            function showPosition(position)
+            {
+                window.userLocation = [position.coords.latitude, position.coords.longitude];
+                return true;
+            }
+
+            /**
+             * Login
+             */
+            function loginWithFacebook()
+            {
+                var provider = new firebase.auth.FacebookAuthProvider();
+                provider.addScope('email');
+                firebase.auth().useDeviceLanguage();
+                firebase.auth().signInWithRedirect(provider);
+            }
+
+            function loginWithGoogle()
+            {
+                var provider = new firebase.auth.GoogleAuthProvider();
+                provider.addScope('email');
+                firebase.auth().useDeviceLanguage();
+                firebase.auth().signInWithRedirect(provider);
+            }
+
+            function logoutUser()
+            {
+                firebase.auth().signOut().then(function() {
+                    jQuery(".loggedInUser").hide();
+                    jQuery(".loggedInUser .username").empty();
+                    jQuery(".notLoggedIn").show();
+                }).catch(function(error) {
+                    console.log(error);
+                });
+            }
+
+            /**
+             * Queries
+             */
+            function searchStations()
+            {
+                window.alreadySearched = self.createPolygonFromBounds(window.map.getBounds());
+                window.latestZoom = window.map.getZoom();
+
+                jQuery('.loading').show();
+
+                var geoQuery = window.gas_Stations_Location.query({
+                    center: window.userLocation.reverse(),
+                    radius: self.getMapRadiusKM()
+                });
+
+                geoQuery.on("key_entered", function(stationId, location) {
+                    window.visibleStations[stationId] = true;
+                    window.gas_Stations.child(stationId).once("value", function(dataSnapshot) {
+                        station = dataSnapshot.val();
+                        if (station !== null && window.visibleStations[stationId] === true) {
+                            window.stationsInformation[stationId] = station;
+                            var stationMarker = self.addStation(stationId, unescape(station.name), location.reverse());
+                            window.clusterMarkers.addLayer(stationMarker);
+                        }
+                    });
+                    window.gas_Stations_Votes.child(stationId).once("value", function(dataSnapshot) {
+                        stationData = dataSnapshot.val();
+                        if (stationData !== null) {
+                            window.stationsVotes[stationId] = stationData;
+                        }
+                    });
+                });
+
+                geoQuery.on("key_exited", function(stationId, location) {
+                    var station = window.visibleStations[stationId];
+
+                    if (station !== true) {
+                        window.clusterMarkers.removeLayer(station);
+                    }
+
+                    delete window.visibleStations[stationId];
+                    delete window.stationsInformation[stationId];
+                });
+
+                geoQuery.on("ready", function() {
+                    window.map.addLayer(window.clusterMarkers);
+                    jQuery(".loading").hide();
+                });
+            }
+
+            function stationVoteYes(e)
+            {
+                if (firebase.auth().currentUser === null) {
+                    jQuery('.loginAt').modal();
+                    return true;
+                }
+
+                var userId = window.currentUser.uid;
+                var fuelType = e.target.dataset.fuel;
+                var stationId = e.target.dataset.stationid;
+
+                var voteKey = stationId + '/' + fuelType  + '/' + userId;
+
+                jQuery('.station' + stationId+'.fuel' + fuelType).removeClass('active');
+
+                if (window.alreadyVoted.hasOwnProperty(stationId + '-' + fuelType) && window.alreadyVoted[stationId + '-' + fuelType] == true) {
+                    window.gas_Stations_Votes.child(voteKey).remove();
+                    delete window.alreadyVoted[stationId + '-' + fuelType];
+                    return true;
+                }
+
+                window.gas_Stations_Votes.child(voteKey).set({
+                    vote: true,
+                    time: Date.now()
+                }).then(()=>{
+                    console.log('Successfully set'); 
+                });
+
+                jQuery('.station' + stationId +'.fuel' + fuelType + '.voteYes').addClass('active');
+                window.alreadyVoted[stationId + '-' + fuelType] = true;
+            }
+
+            function stationVoteNo(e)
+            {
+                if (firebase.auth().currentUser === null) {
+                    jQuery('.loginAt').modal();
+                    return true;
+                }
+
+                var userId = window.currentUser.uid;
+                var fuelType = e.target.dataset.fuel;
+                var stationId = e.target.dataset.stationid;
+
+                var voteKey = stationId + '/' + fuelType  + '/' + userId;
+
+                jQuery('.station' + stationId+'.fuel' + fuelType).removeClass('active');
+
+                if (window.alreadyVoted.hasOwnProperty(stationId + '-' + fuelType) && window.alreadyVoted[stationId + '-' + fuelType] == false) {
+                    window.gas_Stations_Votes.child(voteKey).remove();
+                    delete window.alreadyVoted[stationId][fuelType];
+                    return true;
+                }
+
+                window.gas_Stations_Votes.child(stationId + '/' + fuelType  + '/' + userId).set({
+                    vote: false,
+                    time: Date.now()
+                }).then(()=>{
+                    console.log('Successfully set'); 
+                });
+
+                jQuery('.station' + stationId+'.fuel' + fuelType + '.voteNo').addClass('active');
+                window.alreadyVoted[stationId + '-' + fuelType] = false;
+            }
+
+            /**
+             * Related to Markers and so on
+             */
+            function addStation(stationId, name, location)
+            {
+                var stationName = '';
+                if (name && name != 'undefined') {
+                    stationName = name;
+                }
+
+                var marker = L.marker(location, {'name': stationName, 'stationId': stationId}).bindPopup('<h1>' + stationName + '</h1>');
+                window.visibleStations[stationId] = marker;
+                return marker;
+            }
+
+            function displayStationInformation(e)
+            {
+                var stationId = e.popup._source.options.stationId;
+                var stationName = e.popup._source.options.name;
+
+                var stationObj = window.stationsInformation[stationId];
+                var stationVotes = window.stationsVotes[stationId];
+
+                var curUID = 0;
+                var votedGas = false;
+                var votedEtanol = false;
+                var votedDiesel = false;
+
+                if (firebase.auth().currentUser != null) {
+                    var curUID = firebase.auth().currentUser.uid;
+                    var votedGas = self.checkVote(curUID, window.keyGas, stationId);
+                    var votedEtanol = self.checkVote(curUID, window.keyEtanol, stationId);
+                    var votedDiesel = self.checkVote(curUID, window.keyDiesel, stationId);
+                }
+
+                var haveGasTotal = self.countVotes(true, window.keyGas, stationId);
+                var doesntHaveGasTotal = self.countVotes(false, window.keyGas, stationId);
+                var haveEtanolTotal = self.countVotes(true, window.keyEtanol, stationId);
+                var doesntHaveEtanolTotal = self.countVotes(false, window.keyEtanol, stationId);
+                var haveDieselTotal = self.countVotes(true, window.keyDiesel, stationId);
+                var doesntHaveDieselTotal = self.countVotes(false, window.keyDiesel, stationId);
+
+                var tmpl = $.templates("#stationTmpl");
+
+                var stationObj = {
+                    'name': stationName
+                    , 'stationId': stationId
+                    , 'haveGasTotal': haveGasTotal
+                    , 'doesntHaveGasTotal': doesntHaveGasTotal
+                    , 'haveEtanolTotal': haveEtanolTotal
+                    , 'doesntHaveEtanolTotal': doesntHaveEtanolTotal
+                    , 'haveDieselTotal': haveDieselTotal
+                    , 'doesntHaveDieselTotal': doesntHaveDieselTotal
+                    , 'votedGas': votedGas
+                    , 'votedEtanol': votedEtanol
+                    , 'votedDiesel': votedDiesel
+                };
+
+                e.popup.setContent(tmpl.render(stationObj));
+            }
+
+            /**
+             * Helpers
+             */
+             function getMapRadiusKM() {
+                var mapBoundNorthEast = window.map.getBounds().getNorthEast();
+                var mapDistance = mapBoundNorthEast.distanceTo(window.map.getCenter());
+                return mapDistance/1000;
+            }
+
+            function createPolygonFromBounds(latLngBounds) {
+                var center = latLngBounds.getCenter()
+                    latlngs = []
+                    north = latLngBounds.getNorth()
+                    northEast = latLngBounds.getNorthEast()
+                    east = latLngBounds.getEast()
+                    west = latLngBounds.getWest()
+                    northWest = latLngBounds.getNorthWest()
+                    south = latLngBounds.getSouth()
+                    southEast = latLngBounds.getSouthEast()
+                    southWest = latLngBounds.getSouthWest();
+
+                latlngs.push([northWest.lat, northWest.lng]);//top left
+                latlngs.push([center.lat,  west]); // center left
+                latlngs.push([southWest.lat, southWest.lng]);//bottom left
+                latlngs.push([south, center.lng]);//bottom center
+                latlngs.push([southEast.lat, southEast.lng]);//bottom right
+                latlngs.push([center.lat, east]);// center right
+                latlngs.push([northEast.lat, northEast.lng]);//top right
+                latlngs.push([north, center.lng]);//top center
+
+                return latlngs;
+            }
+
+            function checkVote(uid, fuel, stationId)
+            {
+                var stationVotes = window.stationsVotes[stationId];
+                if (!stationVotes || !stationVotes.hasOwnProperty(fuel)) {
+                    return false;
+                }
+
+                if (stationVotes[fuel].hasOwnProperty(uid)) {
+                    if (stationVotes[fuel][uid].hasOwnProperty('vote')) {
+                        if (stationVotes[fuel][uid]['vote'] == true) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                return false;
+            }
+
+            /**
+             * @param bool votedAs True exists, False doesnt exists. Doh?!
+             * @param string fuel What kind of fuel
+             * @param int stationId Station ID
+             *
+             * @return int
+             */
+            function countVotes(votedAs, fuel, stationId)
+            {
+                var stationVotes = window.stationsVotes[stationId];
+                if (!stationVotes || !stationVotes.hasOwnProperty(fuel)) {
+                    return 0;
+                }
+
+                var votesQty = 0;
+                jQuery.each(stationVotes[fuel], function (index, item)
+                {
+                    if (item.vote === votedAs) votesQty += 1;
+                });
+
+                return votesQty;
+            }
+        </script>
+        <!-- Global site tag (gtag.js) - Google Analytics -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-119947409-1"></script>
+        <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-119947409-1');
+        </script>
+    </body>
+</html>
